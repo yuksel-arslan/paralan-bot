@@ -23,14 +23,19 @@ const PLANS = {
   pro:     { label: "💎 Pro", dailySignals: 999, arbitrage: true, liveAlerts: true, priority: true },
 };
 
+// Escape Markdown V2 special chars
+function escMd(text) {
+  return String(text).replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, "\\$1");
+}
+
 // ─── Helpers ───
 const fmt$ = (n) => {
-  if (n >= 1e9) return `$${(n/1e9).toFixed(1)}B`;
-  if (n >= 1e6) return `$${(n/1e6).toFixed(1)}M`;
-  if (n >= 1e3) return `$${(n/1e3).toFixed(0)}K`;
-  return `$${n.toFixed(0)}`;
+  if (n >= 1e9) return escMd(`$${(n/1e9).toFixed(1)}B`);
+  if (n >= 1e6) return escMd(`$${(n/1e6).toFixed(1)}M`);
+  if (n >= 1e3) return escMd(`$${(n/1e3).toFixed(0)}K`);
+  return escMd(`$${n.toFixed(0)}`);
 };
-const pct = (n) => `${(n * 100).toFixed(1)}%`;
+const pct = (n) => escMd(`${(n * 100).toFixed(1)}%`);
 const riskGrade = (m) => {
   let s = 0;
   // Liquidity (35%)
@@ -172,7 +177,7 @@ function detectSignals(markets) {
           emoji: "🔥",
           title: "Hacim Patlaması",
           market: m,
-          detail: `${fmt$(prev.volume24h)} → ${fmt$(m.volume24h)} (${(m.volume24h / prev.volume24h).toFixed(1)}x)`,
+          detail: `${fmt$(prev.volume24h)} → ${fmt$(m.volume24h)} (${escMd((m.volume24h / prev.volume24h).toFixed(1))}x)`,
           priority: 2,
         });
       }
@@ -186,7 +191,7 @@ function detectSignals(markets) {
           emoji: direction,
           title: `Fiyat ${m.yesPrice > prev.yesPrice ? "Yükselişi" : "Düşüşü"}`,
           market: m,
-          detail: `${pct(prev.yesPrice)} → ${pct(m.yesPrice)} (${priceMove > 0 ? "+" : ""}${(priceMove * 100).toFixed(1)}pp)`,
+          detail: `${pct(prev.yesPrice)} → ${pct(m.yesPrice)} (${priceMove > 0 ? "\\+" : ""}${escMd((priceMove * 100).toFixed(1))}pp)`,
           priority: 2,
         });
       }
@@ -198,7 +203,7 @@ function detectSignals(markets) {
           emoji: "🎯",
           title: "Spread Daralması",
           market: m,
-          detail: `${(prev.spread * 100).toFixed(2)}¢ → ${(m.spread * 100).toFixed(2)}¢`,
+          detail: `${escMd((prev.spread * 100).toFixed(2))}¢ → ${escMd((m.spread * 100).toFixed(2))}¢`,
           priority: 1,
         });
       }
@@ -248,7 +253,7 @@ function formatMarketCard(m, showDetail = false) {
   let msg = `${m.category} *${escMd(m.question)}*\n`;
   msg += `${rg.emoji} Risk: *${rg.g}* · Olasılık: *${pct(m.yesPrice)}*\n`;
   msg += `💰 Hacim 24s: ${fmt$(m.volume24h)} · Likidite: ${fmt$(m.liquidity)}\n`;
-  if (m.spread !== null) msg += `🎯 Spread: ${(m.spread * 100).toFixed(2)}¢ · Kaynak: CLOB\n`;
+  if (m.spread !== null) msg += `🎯 Spread: ${escMd((m.spread * 100).toFixed(2))}¢ · Kaynak: CLOB\n`;
   if (m.daysLeft < 999) msg += `⏳ Kalan: ${m.daysLeft} gün\n`;
   if (showDetail) {
     msg += `\n🔗 [Polymarket'te Gör](https://polymarket.com/event/${m.slug})`;
@@ -271,8 +276,8 @@ function formatArbAlert(arb) {
   let msg = `🔺 *Arbitraj Fırsatı*\n\n`;
   msg += `📌 *${escMd(arb.title)}*\n`;
   msg += `💰 Toplam Likidite: ${fmt$(arb.totalLiq)}\n`;
-  msg += `📊 Toplam Yes: ${(arb.sumYes * 100).toFixed(1)}% · Sapma: ${(arb.deviation * 100).toFixed(1)}%\n`;
-  msg += `💵 Teorik Kâr: *%${arb.profitPct}*\n\n`;
+  msg += `📊 Toplam Yes: ${escMd((arb.sumYes * 100).toFixed(1))}% · Sapma: ${escMd((arb.deviation * 100).toFixed(1))}%\n`;
+  msg += `💵 Teorik Kâr: *%${escMd(arb.profitPct)}*\n\n`;
   arb.markets.slice(0, 6).forEach(m => {
     msg += `  · ${escMd(m.question)}: ${pct(m.yesPrice)}\n`;
   });
@@ -289,7 +294,7 @@ function formatDailySummary(markets, arbs) {
   const totalLiq = markets.reduce((s, m) => s + m.liquidity, 0);
 
   let msg = `☀️ *PARALAN GÜNLÜK RAPOR*\n`;
-  msg += `📅 ${new Date().toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}\n\n`;
+  msg += `📅 ${escMd(new Date().toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }))}\n\n`;
   
   msg += `📊 *Piyasa Özeti*\n`;
   msg += `Toplam Hacim \\(24s\\): ${fmt$(totalVol)}\n`;
@@ -307,7 +312,7 @@ function formatDailySummary(markets, arbs) {
   if (arbs.length > 0) {
     msg += `\n🔺 *Arbitraj Fırsatları*\n`;
     arbs.slice(0, 3).forEach(a => {
-      msg += `· ${escMd(a.title.slice(0, 45))}: Sapma ${(a.deviation * 100).toFixed(1)}% \\(kâr %${a.profitPct}\\)\n`;
+      msg += `· ${escMd(a.title.slice(0, 45))}: Sapma ${escMd((a.deviation * 100).toFixed(1))}% \\(kâr %${escMd(a.profitPct)}\\)\n`;
     });
   }
 
@@ -322,10 +327,6 @@ function formatDailySummary(markets, arbs) {
   return msg;
 }
 
-// Escape Markdown V2 special chars
-function escMd(text) {
-  return text.replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, "\\$1");
-}
 
 // ─── User Management ───
 function getUser(chatId) {
@@ -424,7 +425,7 @@ bot.command("top5", async (ctx) => {
     msg += `*${i + 1}\\.* ${rg.emoji} ${escMd(m.question.slice(0, 60))}\n`;
     msg += `   Olasılık: *${pct(m.yesPrice)}* · Hacim: ${fmt$(m.volume24h)}\n`;
     msg += `   Likidite: ${fmt$(m.liquidity)} · Risk: ${rg.g}`;
-    if (m.spread !== null) msg += ` · Spread: ${(m.spread * 100).toFixed(1)}¢`;
+    if (m.spread !== null) msg += ` · Spread: ${escMd((m.spread * 100).toFixed(1))}¢`;
     msg += `\n\n`;
   });
   msg += `🌐 [Dashboard](https://paralan.trade)`;
@@ -442,7 +443,7 @@ bot.command("arbitraj", async (ctx) => {
   let msg = `🔺 *ARBİTRAJ FIRSATLARI*\n\n`;
   arbs.slice(0, limit).forEach((a, i) => {
     msg += `*${i + 1}\\.* ${escMd(a.title.slice(0, 50))}\n`;
-    msg += `   Sapma: *${(a.deviation * 100).toFixed(1)}%* · Kâr: *%${a.profitPct}*\n`;
+    msg += `   Sapma: *${escMd((a.deviation * 100).toFixed(1))}%* · Kâr: *%${escMd(a.profitPct)}*\n`;
     msg += `   Likidite: ${fmt$(a.totalLiq)} · ${a.markets.length} market\n\n`;
   });
   
