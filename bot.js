@@ -366,7 +366,9 @@ bot.start((ctx) => {
     `⚽ /spor \\— Spor marketleri\n` +
     `🛡 /guvenli \\— Sadece A\\-B risk notlu marketler\n` +
     `⭐ /premium \\— Premium plan bilgisi\n` +
+    `💬 /sohbet \\— Serbest arama modu\n` +
     `❓ /yardim \\— Komut listesi\n\n` +
+    `💡 _Herhangi bir kelime yazarak market arayabilirsin\\!_\n\n` +
     `🆓 Free planda günde 5 sinyal alırsın\\.\n` +
     `⭐ Premium ile sınırsız sinyal \\+ anlık bildirim\\!\n\n` +
     `🌐 [paralan\\.trade](https://paralan.trade)`,
@@ -386,7 +388,9 @@ bot.command("yardim", (ctx) => {
     `🚀 /teknoloji · ⚽ /spor · 🌍 /jeopolitik\n\n` +
     `⭐ /premium \\— Plan ve fiyatlar\n` +
     `📬 /rapor \\— Günlük raporu şimdi al\n` +
-    `ℹ️ /durum \\— Hesap durumun`,
+    `ℹ️ /durum \\— Hesap durumun\n\n` +
+    `💬 *Serbest Arama:*\n` +
+    `Herhangi bir kelime yaz, ilgili marketleri bul\\!`,
     { disable_web_page_preview: true }
   );
 });
@@ -525,6 +529,20 @@ bot.command("durum", (ctx) => {
   );
 });
 
+bot.command("sohbet", async (ctx) => {
+  ctx.replyWithMarkdownV2(
+    `💬 *SOHBET MODU*\n\n` +
+    `Herhangi bir konu yazarak market arayabilirsin\\!\n\n` +
+    `*Örnekler:*\n` +
+    `· _Trump_ → Politika marketleri\n` +
+    `· _Bitcoin_ → Kripto marketleri\n` +
+    `· _AI_ → Teknoloji marketleri\n` +
+    `· _NBA_ → Spor marketleri\n\n` +
+    `Sadece yaz, bot sana ilgili marketleri getirsin\\! 🔍`,
+    { disable_web_page_preview: true }
+  );
+});
+
 bot.command("premium", (ctx) => {
   ctx.replyWithMarkdownV2(
     `⭐ *PARALAN PREMIUM*\n\n` +
@@ -549,6 +567,45 @@ bot.command("premium", (ctx) => {
     `_Kripto ödeme \\(USDC/USDT\\) de kabul edilir\\._`,
     { disable_web_page_preview: true }
   );
+});
+
+// ─── Free-text Chat Handler ───
+bot.on("text", async (ctx) => {
+  const text = ctx.message.text;
+
+  // Skip commands
+  if (text.startsWith("/")) return;
+
+  const query = text.trim().toLowerCase();
+  if (query.length < 2) return;
+
+  await ctx.reply("🔍 Aranıyor...");
+  const { markets } = await fetchMarkets();
+  if (markets.length === 0) return ctx.reply("❌ Veri alınamadı, tekrar deneyin.");
+
+  const results = markets
+    .filter(m => m.question.toLowerCase().includes(query))
+    .sort((a, b) => b.volume24h - a.volume24h)
+    .slice(0, 5);
+
+  if (results.length === 0) {
+    return ctx.replyWithMarkdownV2(
+      `🔍 *"${escMd(text)}"* için sonuç bulunamadı\\.\n\n` +
+      `💡 _Farklı bir anahtar kelime dene veya /top5 ile en aktif marketleri gör\\._`,
+      { disable_web_page_preview: true }
+    );
+  }
+
+  let msg = `🔍 *"${escMd(text)}"* için ${results.length} sonuç:\n\n`;
+  results.forEach((m, i) => {
+    const rg = riskGrade(m);
+    msg += `*${i + 1}\\.* ${rg.emoji} ${escMd(m.question.slice(0, 60))}\n`;
+    msg += `   Olasılık: *${pct(m.yesPrice)}* · Hacim: ${fmt$(m.volume24h)}\n`;
+    msg += `   Likidite: ${fmt$(m.liquidity)} · Risk: ${rg.g}\n`;
+    msg += `   🔗 [Polymarket](https://polymarket.com/event/${m.slug})\n\n`;
+  });
+  msg += `💬 Başka bir şey ara veya /yardim yaz\\.`;
+  ctx.replyWithMarkdownV2(msg, { disable_web_page_preview: true });
 });
 
 // ─── Periodic Signal Scanner ───
