@@ -1,0 +1,14 @@
+{
+  "name": "paralan-bot",
+  "version": "1.0.0",
+  "description": "Paralan Trade - Polymarket Signal Bot for Telegram",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "node --watch bot.js"
+  },
+  "dependencies": {
+    "telegraf": "^4.16.3",
+    "node-cron": "^3.0.3"
+  }
+}
